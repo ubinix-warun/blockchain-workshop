@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { PolyjuiceHttpProvider } from '@polyjuice-provider/web3';
 import { AddressTranslator } from 'nervos-godwoken-integration';
 
-import { SimpleStorageWrapper } from '../lib/contracts/SimpleStorageWrapper';
+import { ZombieFactoryWrapper } from '../lib/contracts/ZombieFactoryWrapper';
 import { CONFIG } from '../config';
 
 async function createWeb3() {
@@ -41,17 +41,18 @@ async function createWeb3() {
 
 export function App() {
     const [web3, setWeb3] = useState<Web3>(null);
-    const [contract, setContract] = useState<SimpleStorageWrapper>();
+    const [contract, setContract] = useState<ZombieFactoryWrapper>();
     const [accounts, setAccounts] = useState<string[]>();
     const [l2Balance, setL2Balance] = useState<bigint>();
     const [existingContractIdInputValue, setExistingContractIdInputValue] = useState<string>();
-    const [storedValue, setStoredValue] = useState<number | undefined>();
+    const [zombieSizeValue, setZombieSizeValue] = useState<number | undefined>();
+    const [latestZombieValue, setLatestZombieValue] = useState<[string, string] | undefined>();
     const [deployTxHash, setDeployTxHash] = useState<string | undefined>();
     const [polyjuiceAddress, setPolyjuiceAddress] = useState<string | undefined>();
     const [transactionInProgress, setTransactionInProgress] = useState(false);
     const toastId = React.useRef(null);
-    const [newStoredNumberInputValue, setNewStoredNumberInputValue] = useState<
-        number | undefined
+    const [newZombieNamenputValue, setZombieNameInputValue] = useState<
+        string | undefined
     >();
 
     useEffect(() => {
@@ -87,7 +88,7 @@ export function App() {
     const account = accounts?.[0];
 
     async function deployContract() {
-        const _contract = new SimpleStorageWrapper(web3);
+        const _contract = new ZombieFactoryWrapper(web3);
 
         try {
             setDeployTxHash(undefined);
@@ -111,25 +112,35 @@ export function App() {
         }
     }
 
-    async function getStoredValue() {
-        const value = await contract.getStoredValue(account);
-        toast('Successfully read latest stored value.', { type: 'success' });
+    async function getZombiesSize() {
+        const value = await contract.getZombiesSize(account);
+        toast('Successfully read latest size of Zombies.', { type: 'success' });
 
-        setStoredValue(value);
+        console.log(value);
+        setZombieSizeValue(value);
+    }
+
+    async function getLatestZombie() {
+        const value = await contract.getLatestZombie(account);
+        toast('Successfully read latest zombies.', { type: 'success' });
+
+        console.log(value);
+        setLatestZombieValue(value);
     }
 
     async function setExistingContractAddress(contractAddress: string) {
-        const _contract = new SimpleStorageWrapper(web3);
+        const _contract = new ZombieFactoryWrapper(web3);
         _contract.useDeployed(contractAddress.trim());
 
         setContract(_contract);
-        setStoredValue(undefined);
+        setZombieSizeValue(undefined);
     }
 
-    async function setNewStoredValue() {
+    async function createRandomZombie() {
         try {
             setTransactionInProgress(true);
-            await contract.setStoredValue(newStoredNumberInputValue, account);
+            console.log(newZombieNamenputValue);
+            await contract.createRandomZombie(newZombieNamenputValue, account);
             toast(
                 'Successfully set latest stored value. You can refresh the read value now manually.',
                 { type: 'success' }
@@ -183,11 +194,8 @@ export function App() {
             <br />
             <hr />
             <p>
-                The button below will deploy a SimpleStorage smart contract where you can store a
-                number value. By default the initial stored value is equal to 123 (you can change
-                that in the Solidity smart contract). After the contract is deployed you can either
-                read stored value from smart contract or set a new one. You can do that using the
-                interface below.
+                The button below will deploy a ZombieFactory smart contract where you can create a
+                Zombie with Name. (REF: CryptoZombie)
             </p>
             <button onClick={deployContract} disabled={!l2Balance}>
                 Deploy contract
@@ -205,18 +213,23 @@ export function App() {
             </button>
             <br />
             <br />
-            <button onClick={getStoredValue} disabled={!contract}>
-                Get stored value
+            <button onClick={getZombiesSize} disabled={!contract}>
+                Get Size of Zombies
             </button>
-            {storedValue ? <>&nbsp;&nbsp;Stored value: {storedValue.toString()}</> : null}
+            {zombieSizeValue ? <>&nbsp;&nbsp;ZombieSize value: {zombieSizeValue.toString()}</> : null}
+            <br />
+            <button onClick={getLatestZombie} disabled={!contract}>
+                Get latest Zombies
+            </button>
+            {latestZombieValue ? <>&nbsp;&nbsp;Zombie Name: {latestZombieValue[0].toString()}&nbsp;&nbsp;Zombie DNA: {latestZombieValue[1].toString()}</> : null}
             <br />
             <br />
             <input
-                type="number"
-                onChange={e => setNewStoredNumberInputValue(parseInt(e.target.value, 10))}
+                type="text"
+                onChange={e => setZombieNameInputValue(e.target.value)}
             />
-            <button onClick={setNewStoredValue} disabled={!contract}>
-                Set new stored value
+            <button onClick={createRandomZombie} disabled={!contract}>
+                Create Zombie with Name
             </button>
             <br />
             <br />
