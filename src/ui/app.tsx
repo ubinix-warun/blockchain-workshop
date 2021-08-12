@@ -9,6 +9,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import { PolyjuiceHttpProvider } from '@polyjuice-provider/web3';
 import { AddressTranslator } from 'nervos-godwoken-integration';
 
+import * as CompiledContractArtifact from '../../build/contracts/ERC20.json';
+const SUDT_Proxy = '0x790e17a78d94f2210D903Abf2EE6E07C0C039D1C';
+
 import { ZombieFactoryWrapper } from '../lib/contracts/ZombieFactoryWrapper';
 import { CONFIG } from '../config';
 
@@ -44,6 +47,8 @@ export function App() {
     const [contract, setContract] = useState<ZombieFactoryWrapper>();
     const [accounts, setAccounts] = useState<string[]>();
     const [l2Balance, setL2Balance] = useState<bigint>();
+    const [balanceOf, setBalanceOf] = useState<bigint>();
+    const [depositAddress, setDepositAddress] = useState<string | undefined>();
     const [existingContractIdInputValue, setExistingContractIdInputValue] = useState<string>();
     const [zombieSizeValue, setZombieSizeValue] = useState<number | undefined>();
     const [latestZombieValue, setLatestZombieValue] = useState<[string, string] | undefined>();
@@ -175,6 +180,31 @@ export function App() {
         })();
     });
 
+    const getSUDTBalance = async () => {
+        const contract = new web3.eth.Contract(
+            CompiledContractArtifact.abi as any,
+            SUDT_Proxy
+        );
+
+        const _balanceOf = await contract.methods.balanceOf(polyjuiceAddress).call({
+            from: accounts?.[0]
+        });
+        setBalanceOf(_balanceOf);
+    };
+
+    const getSUDTLayer2DepositAddress = async () => {
+
+        const addressTranslator = new AddressTranslator();
+        const _depositAddress = await addressTranslator.getLayer2DepositAddress(
+            web3,
+            accounts?.[0]
+        );
+
+        setDepositAddress(_depositAddress.addressString);
+
+        getSUDTBalance();
+    };
+
     const LoadingIndicator = () => <span className="rotating-icon">⚙️</span>;
 
     return (
@@ -191,6 +221,20 @@ export function App() {
             <br />
             Deployed contract address: <b>{contract?.address || '-'}</b> <br />
             Deploy transaction hash: <b>{deployTxHash || '-'}</b>
+            <br />
+            <hr />
+            <br />
+            {!depositAddress && (
+                    <button onClick={getSUDTLayer2DepositAddress}>
+                        Get SUDT Layer 2 Deposit Address
+                    </button>
+                )}
+            SUDT Layer 2 Deposit Address on Layer 1:
+            {depositAddress}
+            <br />
+            SUDT Layer 2 balance:{' '}
+            <b>{ balanceOf } </b>
+            <br />
             <br />
             <hr />
             <p>
